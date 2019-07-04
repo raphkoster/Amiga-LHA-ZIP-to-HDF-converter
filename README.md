@@ -29,6 +29,7 @@ Note that these are not bootable `.hdf` files, as they do not have Kickstarts in
 
 ## Issues
 
-This hasn't seen a lot of testing yet. I don't know what happens if you feed it other kinds of files. 
-TODO: have it convert ADFs to HDFs.
-TODO: have it generate HDFs rather than copy the blank ones.
+- This hasn't seen a lot of testing yet. I don't know what happens if you feed it other kinds of files. 
+- TODO: have it convert ADFs to HDFs.
+- TODO: have it generate HDFs rather than copy the blank ones.
+- TODO: support batch processing
