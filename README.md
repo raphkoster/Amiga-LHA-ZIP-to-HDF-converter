@@ -1,5 +1,5 @@
 # Amiga-LHA-ZIP-to-HDF-converter
-This bash script converts LHAs or zipped directories to HDFs usable in lr-puae in RetroPie.
+This bash script converts LHAs, .HDFs, or zipped directories to HDFs usable in lr-puae in RetroPie.
 
 ## Installation
 This requires Python, PiP, amitools, and lha.
