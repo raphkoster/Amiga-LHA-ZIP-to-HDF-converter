@@ -14,7 +14,7 @@ sudo apt-get install -y lhasa
 Then download and install this package. It currently requires there to be a set of blank HDF files in a subdirectory.
 
 ```
-sudo chmod 755 amigatool*
+sudo chmod a+x amigatool*
 sudo chown pi:pi amigatool*
 ```
 
