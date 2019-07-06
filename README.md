@@ -13,13 +13,18 @@ sudo apt-get install -y lhasa
 
 Then download and install this package. It currently requires there to be a set of blank HDF files in a subdirectory.
 
+```
+sudo chmod 755 amigatool*
+sudo chown pi:pi amigatool*
+```
+
 ## Usage
 
 Put the entire package (scripts, blankhdfs folder) in the directory with your Amiga roms.
 
 ### To run on a single file
 ```
-sudo ./amigatool.sh filename
+./amigatool.sh filename
 ```
 
 If the file is a `.lha`, it will be unpacked into a temporary directory, then rebuilt into an .`hdf` and placed in a new `/hdf` directory with the main .slave file renamed to game.slave. This will then run directly in lr-puae just like an `.adf`.
@@ -34,7 +39,7 @@ Note that these are not bootable `.hdf` files, as they do not have Kickstarts in
 
 ### To convert an entire directory
 ```
-sudo ./amigatool-batch.sh
+./amigatool-batch.sh
 ```
 
 This will go through every file in the folder in which it is run, and call the previous script on each one.
