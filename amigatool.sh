@@ -184,7 +184,15 @@ for i in *.info; do
 	echo -ne "found game...building"
 
 	# cd into the actual game directory
-	cd "$gamename"
+	if [[ -d "$gamename" ]]; then
+        cd "$gamename"
+    else
+       	echo -e "...\e[31mCorrupt!\e[39m"
+        rm "../hdf/$name.hdf"
+        cd ..
+        rm -rf amigatooltmp
+        exit $corrupt
+    fi
 
 	# copy each file into the blank hdf
 	# unless it's named .slave, in which case we rename it game.slave
