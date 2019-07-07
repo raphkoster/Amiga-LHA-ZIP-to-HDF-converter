@@ -9,6 +9,7 @@ sudo apt-get update
 sudo apt-get install python-pip
 sudo pip install amitools
 sudo apt-get install -y lhasa
+sudo apt-get install zip unzip
 ```
 
 Then download and install this package. It currently requires there to be a set of blank HDF files in a subdirectory.
@@ -37,6 +38,8 @@ If the file is a `.hdf`, it will be converted if necessary, then moved to the `/
 
 Note that these are not bootable `.hdf` files, as they do not have Kickstarts in them. They presume that you have properly set up WHDLoad.hdf and placed it in `~/RetroPie/BIOS`
 
+The files will be output as zipped `.hdf` files.
+
 ### To convert an entire directory
 ```
 ./amigatool-batch.sh
@@ -47,5 +50,3 @@ This will go through every file in the folder in which it is run, and call the p
 ## Issues
 
 - This hasn't seen a lot of testing yet. I don't know what happens if you feed it other kinds of files. 
-- TODO: have it generate HDFs rather than copy the blank ones.
-- TODO: investigate whether we need all the extra files on these blanks.

@@ -9,20 +9,25 @@
 
 source=$1
 
+# errcodes for the batch processor
+skipped=1
+invalid=2
+nowhd=3
+compat=4
+corrupt=5
+
 if [[ ! -f "$source" ]]; then
-    echo "Skipping directory $source."
-    exit 1
+    echo -e "\e[1m$source:\e[0m is a directory, skipping."
+    exit $skipped
 fi
 
 dest="${1%.*}"
 name="${source%.*}"
 
 if [[ ! "$source" == *.zip ]] && [[ ! "$source" == *.lha ]] && [[ ! "$source" = *.hdf ]]; then
-    echo "$source isn't a .zip, .lha, or .hdf."
-    exit 1
+    echo -e "\e[1m$source:\e[0m is not an .lha, .zip., or .hdf, skipping."
+    exit $invalid
 fi
-
-echo -ne "\e[1m$source:\e[0m extracting..."
 
 mkdir amigatooltmp
 if [ ! -d "hdf" ]; then
@@ -33,17 +38,21 @@ cd amigatooltmp
 
 # is it an .lha?
 if [[ $source == *.lha ]]; then
+    echo -ne "\e[1m$source:\e[0m extracting..."
 	lha eq2 "../$source"
 # is it a zip?
 elif [[ $source == *.zip ]] ;then
+    echo -ne "\e[1m$source:\e[0m unzipping..."
 	unzip -q "../$source"
 elif [[ $source == *.hdf ]] ;then
+    echo -ne "\e[1m$source:\e[0m "
     cp "../$source" "$source"
 fi
 
 # after unzipping, did it give us something with a .info file in it?
 if [ ! -f *.info ]; then
 	#echo -ne "finding game."
+
     # if it's an hdf
 	if [ -f *.hdf ]; then
 		#echo ".hdf file found."
@@ -64,25 +73,27 @@ if [ ! -f *.info ]; then
 				if [[ -f "game.slave" ]] || [[ -f "game.Slave" ]]; then
 					cd ..
 					rm -rf "$name"
-					cp "$file" ../hdf
-            		echo -e "copying to /hdf... \e[1m\e[32mDone!\e[39m\e[0m"
+            		echo -ne "zipping..."
+					zip -q "$name.zip" "$filename"
+                    cp "$name.zip" ../hdf
+            		echo -e "\e[1m\e[32malready compatible!\e[39m\e[0m"
 					cd ..
 					rm -rf amigatooltmp
-					exit 1
+					exit $compat
 				fi
                 echo -ne "processing."
 
 				# no .slave file?
                 # is there instead a directory and a .info?
 				# move everything from the directory up
-				if [[ ! -f "*.slave" ]] && [[ ! -f "*.Slave" ]]; then
+				if [[ ! -f "$*.slave" ]] && [[ ! -f "*.Slave" ]]; then
                     for i in *.info; do
                         echo -ne "."
 	                    [ -f "$i" ] || break
 	                    if [[ -d "$i" ]]; then
                             gamename="${i%.*}"
 	                        #echo "Found game named $gamename, copying out of subdirectory"
-                            echo -ne "found $gamename."
+                            echo -ne "found game."
 	                        # move contents out of the actual game directory
                             chmod a+w "$gamename"/*
                             find . -mindepth 2 -type f -print -exec mv {} . \;
@@ -94,11 +105,14 @@ if [ ! -f *.info ]; then
                                 echo -ne "packing..."
 	    		    			xdftool "$filename" pack "$name"
 	    			    		rm -rf "$name"
-	    			    		cp "$filename" ../hdf
-		     		    		echo -e "copying to /hdf...  \e[1m\e[32mDone!\e[39m\e[0m"
+                        		echo -ne "zipping..."
+			            		zip -q "$name.zip" "$filename"
+                                cp "$name.zip" ../hdf
+		     		    		rm "$filename"
+                                echo -e "\e[1m\e[32mDone!\e[39m\e[0m"
 			    	    		cd ..
 				        		rm -rf amigatooltmp
-					         	exit 1
+					         	exit 0
                             else
                                 echo -ne "processing..."
                             fi
@@ -112,30 +126,34 @@ if [ ! -f *.info ]; then
 				# is there a different slave file?
 				for slave in * ; do
                     echo -ne "."
-					if [[ "$slave" == *.slave ]] || [[ "$slave" == *.Slave ]]; then
+                    if [[ "$slave" == "$name.slave" ]] || [[ "$slave" == "$name.Slave" ]]; then
 						#echo "Found $slave, copying to game.slave"
                         # rename, cd up, del the old hdf, repack
+                        echo -ne "fixing..."
                         mv "$slave" "game.slave"
 						cd ..
 						rm "$filename"
                         echo -ne "packing..."
 						xdftool "$filename" pack "$name"
 						rm -rf "$name"
-						cp "$filename" ../hdf
-						echo -e "copying to /hdf...  \e[1m\e[32mDone!\e[39m\e[0m"
+                   		echo -ne "zipping..."
+                		zip -q "$name.zip" "$filename"
+                        rm "$filename"
+                        cp "$name.zip" ../hdf
+						echo -e "\e[1m\e[32mDone!\e[39m\e[0m"
 						cd ..
 						rm -rf amigatooltmp
-						exit 1
+						exit 0
                     fi
 				done
                 cd ..
 			fi
 		done
 	fi
-	echo -e "...\e[31mThis file does not contain a WHDLoad game.\e[39m"
+	echo -e "...\e[31mNo WHDLoad game found.\e[39m"
 	cd ..
 	sudo rm -rf amigatooltmp
-	exit 1
+	exit $nowhd
 fi
 
 filesize=$(du -sm | cut -f1)
@@ -143,39 +161,27 @@ filesize=$(du -sm | cut -f1)
 filesize=$(( filesize + 1 ))
 #echo "Need disk larger than $filesize MB"
 echo -ne "."
-# copy blank hdf of the right size (larger) into the /hdf directory
-blank="../blankhdfs/blank2mb.hdf"
-if (( $filesize > 2 )); then
-	blank="../blankhdfs/blank4mb.hdf"
+
+# remove previous pass if it exists
+if [[ -f ../hdf/$name.hdf ]]; then
+    #echo -ne "overwriting old..."
+    rm ../hdf/$name.hdf
 fi
-if (( $filesize > 4 )); then
-	blank="../blankhdfs/blank6mb.hdf"
-fi
-if (( $filesize > 6 )); then
-	blank="../blankhdfs/blank8mb.hdf"
-fi
-if (( $filesize > 8 )); then
-	blank="../blankhdfs/blank10mb.hdf"
-fi
-if (( $filesize > 10 )); then
-	blank="../blankhdfs/blank12mb.hdf"
-fi
-if (( $filesize > 12 )); then
-	blank="../blankhdfs/blank14mb.hdf"
-fi
-if (( $filesize > 14 )); then
-	blank="../blankhdfs/blank38mb.hdf"
+if [[ -f ../hdf/$name.zip ]]; then
+    #echo -ne "overwriting old..."
+    rm ../hdf/$name.zip
 fi
 
-#echo "Copying $blank."
-cp "$blank" "../hdf/$name.hdf"
+#calculate new hdf filesize... want to make it 1.25x the orig size, so room for saved games
+newsize=$(echo "scale=0;($filesize*1.25+0.5)/1" | bc)
+xdftool ../hdf/$name.hdf create size=${newsize}M + format Work ffs
 
 # identify the game name
 for i in *.info; do
     echo -ne "."
 	[ -f "$i" ] || break
 	gamename="${i%.*}"
-	echo -ne "found game $gamename...packing"
+	echo -ne "found game...building"
 
 	# cd into the actual game directory
 	cd "$gamename"
@@ -184,19 +190,35 @@ for i in *.info; do
 	# unless it's named .slave, in which case we rename it game.slave
 	for j in *; do
 
-		if [[ $j == *.slave ]] || [[ $j == *.Slave ]];then
-			xdftool "../../hdf/$name.hdf" write "$j" "game.slave"
-			#echo "Copying $j into $name.hdf as game.slave"
+		if [[ $j == "$gamename.slave" ]] || [[ $j == "$gamename.Slave" ]];then
+			xdftool "../../hdf/$name.hdf" write "$j" "game.slave" > /dev/null 2>&1
+			if [ ! $? -eq 0 ]; then
+               	echo -e "...\e[31mCorrupt!\e[39m"
+                rm "../../hdf/$name.hdf"
+                cd ../..
+                rm -rf amigatooltmp
+                exit $corrupt
+            fi
+            #echo "Copying $j into $name.hdf as game.slave"
 		else
-			xdftool "../../hdf/$name.hdf" write "$j"
+			xdftool "../../hdf/$name.hdf" write "$j" > /dev/null 2>&1
+			if [ ! $? -eq 0 ]; then
+               	echo -e "...\e[31mCorrupt!\e[39m"
+                rm "../../hdf/$name.hdf"
+                cd ../..
+                rm -rf amigatooltmp
+                exit $corrupt
+            fi
 			#echo "Copying $j into $name.hdf"
 		fi
 		echo -ne "."
 	done
-	echo -e "copying to /hdf...  \e[1m\e[32mDone!\e[39m\e[0m"
 
-	# back out
-	cd ..
+    echo -ne "zipping..."
+    cd ../../hdf
+    zip -q "$name.zip" "$name.hdf"
+    rm "$name.hdf"
+	echo -e "\e[1m\e[32mDone!\e[39m\e[0m"
 
 done
 
@@ -205,4 +227,4 @@ cd ..
 # remove the temporary working space
 
 rm -rf amigatooltmp
-exit 1
+exit 0
